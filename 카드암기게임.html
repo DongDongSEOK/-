@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Card Game</title>
+    <style>
+        /* CSS 스타일링 */
+        .card {
+            width: 100px;
+            height: 100px;
+            background-color: lightblue;
+            margin: 10px;
+            display: inline-block;
+            text-align: center;
+            line-height: 100px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Memory Card Game</h1>
+    <button onclick="startGame(2, 6)">난이도 1단계</button>
+    <button onclick="startGame(3, 5)">난이도 2단계</button>
+    <div id="game-board"></div>
+    <div id="message"></div>
+    <div id="timer">남은 시간: <span id="countdown">15</span>초</div>
+    <h2>랭킹</h2>
+    <ol id="ranking"></ol>
+
+    <script>
+        // JavaScript 코드
+        let cards = ['A', 'B', 'C', 'D', 'E'];
+        let flippedCards = [];
+        let matchedCards = [];
+        let gameBoard = document.getElementById('game-board');
+        let message = document.getElementById('message');
+        let timerElement = document.getElementById('countdown');
+        let timer;
+        let startTime, endTime;
+        let rankings = [];
+        let playerIdCounter = 1;
+        let usedPlayerIds = new Set(); // 이미 사용된 플레이어 ID를 추적하기 위한 집합
+
+        function startGame(totalPairs, showTime) {
+            clearInterval(timer); // 기존 타이머 초기화
+            gameBoard.innerHTML = '';
+            matchedCards = [];
+            flippedCards = [];
+            let selectedCards = [];
+
+            // 카드 쌍 선택
+            while (selectedCards.length < totalPairs) {
+                let card = cards[Math.floor(Math.random() * cards.length)];
+                if (selectedCards.indexOf(card) === -1) {
+                    selectedCards.push(card);
+                }
+            }
+
+            selectedCards = selectedCards.concat(selectedCards); // 카드를 쌍으로 만듦
+            selectedCards = shuffle(selectedCards); // 카드 섞기
+
+            for (let i = 0; i < selectedCards.length; i++) {
+                let card = document.createElement('div');
+                card.classList.add('card');
+                card.textContent = ' ';
+                card.dataset.value = selectedCards[i];
+                card.addEventListener('click', flipCard);
+                gameBoard.appendChild(card);
+            }
+
+            // 선택한 난이도에 맞게 카드 보여주기
+            document.querySelectorAll('.card').forEach(card => {
+                card.textContent = card.dataset.value;
+            });
+            setTimeout(() => {
+                document.querySelectorAll('.card').forEach(card => {
+                    card.textContent = '';
+                });
+                startTimer(15);
+            }, showTime * 1000);
+
+            // 게임 시작 시 어르신 번호 표시
+            message.textContent = "어르신 " + playerIdCounter + "님, 게임을 시작합니다!";
+        }
+
+        function flipCard() {
+            let card = this;
+            if (!card.textContent) {
+                card.textContent = card.dataset.value;
+                flippedCards.push(card);
+
+                if (flippedCards.length === 2) {
+                    if (flippedCards[0].textContent === flippedCards[1].textContent) {
+                        matchedCards.push(flippedCards[0], flippedCards[1]);
+                        flippedCards = [];
+                        if (matchedCards.length === document.querySelectorAll('.card').length) {
+                            endTimer();
+                            let elapsedTime = parseFloat(timerElement.textContent);
+                            message.textContent = "축하합니다! 모든 카드를 맞추셨습니다! 소요 시간: " + elapsedTime.toFixed(2) + "초";
+                            addToRankings(playerIdCounter, elapsedTime);
+                            updateRankings();
+                            playerIdCounter++;
+                        }
+                    } else {
+                        setTimeout(() => {
+                            flippedCards.forEach(card => {
+                                card.textContent = '';
+                            });
+                            flippedCards = [];
+                        }, 1000);
+                    }
+                }
+            }
+        }
+
+        function startTimer(time) {
+            let currentTime = time;
+            timerElement.textContent = currentTime.toFixed(2);
+            timer = setInterval(() => {
+                currentTime -= 0.01;
+                timerElement.textContent = currentTime.toFixed(2);
+                if (currentTime <= 0) {
+                    endTimer();
+                    message.textContent = "게임 오버! 시간 제한을 초과하셨습니다.";
+                }
+                if (currentTime < 0) {
+                    currentTime = 0; // 음수가 되지 않도록 조치
+                }
+            }, 10);
+        }
+
+        function endTimer() {
+            clearInterval(timer);
+        }
+
+        function shuffle(array) {
+            let currentIndex = array.length, temporaryValue, randomIndex;
+            while (currentIndex !== 0) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                temporaryValue = array[currentIndex];
+                array[currentIndex] = array[randomIndex];
+                array[randomIndex] = temporaryValue;
+            }
+            return array;
+        }
+
+        function generateUniquePlayerId() {
+            let playerId = Math.floor(Math.random() * 9999999) + 1;
+            while (usedPlayerIds.has(playerId)) {
+                playerId = Math.floor(Math.random() * 9999999) + 1;
+            }
+            usedPlayerIds.add(playerId);
+            return playerId;
+        }
+
+        function addToRankings(playerId, time) {
+            rankings.push({ playerId: playerId, time: time });
+            rankings.sort((a, b) => a.time - b.time);
+            if (rankings.length > 10) {
+                rankings.pop();
+            }
+        }
+
+        function updateRankings() {
+            let rankingList = document.getElementById('ranking');
+            rankingList.innerHTML = '';
+            rankings.forEach((user, index) => {
+                let listItem = document.createElement('li');
+                listItem.textContent = "어르신 " + user.playerId + " - " + user.time.toFixed(2) + "초";
+                rankingList.appendChild(listItem);
+            });
+        }
+    </script>
+</body>
+</html>
